@@ -8,17 +8,30 @@ app.use(cors())
 app.use(bodyParser.json())
 
 
-const users = []
+var couchbase = require('couchbase')
+var cluster = new couchbase.Cluster('couchbase://162.243.11.71:8091/');
+var bucket = cluster.openBucket('default');
+var N1qlQuery = couchbase.N1qlQuery;
+
 
 app.post('/signup',  function (req, res) {
-  console.log(`Saved user ${JSON.stringify(req.body)}`)
-  users.push(req.body)
 
-  res.sendStatus(200)
+  bucket.get('users', function (err, doc) {
+    console.log(JSON.stringify(doc))
+    
+    doc.value.data.push(req.body)
+
+    bucket.upsert('users', doc.value , function(err, result) {
+      if (err) throw err;
+      res.sendStatus(200)
+    }); 
+  }) 
 })
 
 app.get('/users', function (req, res) {
-    res.send(JSON.stringify(users))
+  bucket.get('users', function (err, result) {
+      res.send(JSON.stringify(result.value.data));
+  }) 
 })
 
 app.listen(3030)
